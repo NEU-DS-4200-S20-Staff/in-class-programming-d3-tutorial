@@ -3,6 +3,10 @@ In this activity, you are going to try to follow along on creating a visualizati
 
 This activity is __extra credit__ - it can be worth up to two missed in-class assignments.  Making the map is worth one, and making the scatterplot and connecting it to the map is worth another.  The solution will be posted after a few days so it cannot be handed in late.
 
+
+![screenshot](img/screenshot.png)
+
+
 ## Data
 
 We will be visualizing made up data about Aditeya's experience with various cities that he's visted.  In particular, we are analyzing the relationship between perceived diversity, food, and geographic location.
