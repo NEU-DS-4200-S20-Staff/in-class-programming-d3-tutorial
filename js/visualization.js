@@ -7,6 +7,12 @@ var svg = d3
   .attr("width", width)
   .attr("height", height);
 
+var svg2 = d3
+  .select("#chart-container")
+  .append("svg")
+  .attr("width", width)
+  .attr("height", height);
+
 var projection = d3
   .geoAlbersUsa()
   .translate([width / 2, height / 2])
@@ -17,7 +23,12 @@ var path = d3.geoPath().projection(projection);
 d3.json("us.json", function(us) {
   //Error
   d3.csv("data/cities-visited.csv", function(cities) {
-    drawMap(us, cities);
+    d3.csv("data/statesvisited.csv", function(statesVisited) {
+      d3.tsv("data/us-state-names.tsv", function(stateNames) {
+        drawMap(us, cities, statesVisited, stateNames);
+        drawChart(cities);
+      });
+    });
   });
 });
 
@@ -26,8 +37,98 @@ var brush = d3
   .on("start brush", highlight)
   .on("end", brushend);
 
-function drawMap(us, cities) {
+function drawChart(cities) {
+  let margin = {
+    top: 20,
+    right: 30,
+    bottom: 40,
+    left: 30
+  }
+
+
+  // Create a scale
+  let xScale = d3.scaleLinear()
+                  .domain([
+                    d3.min(cities, function(d) { return d.food; }),
+                    d3.max(cities, function(d) { return d.food; })
+                  ])
+                  .range([margin.left, width - margin.right])
+
+  let yScale = d3.scaleLinear()
+                  .domain([
+                    d3.min(cities, function(d) { return d.diversity; }),
+                    d3.max(cities, function(d) { return d.diversity; })
+                  ])
+                  .range([height - margin.bottom, margin.top])
+
+  // Create an axis
+  let xAxis = d3.axisTop()
+                .scale(xScale)
+                .ticks(5);
+  let yAxis = d3.axisRight()
+                .scale(yScale)
+                .ticks(5);
+
+  let highlightChart = function(d) {
+    if (d3.event.selection === null) return;
+
+    let [[x0, y0], [x1, y1]] = d3.event.selection;
+
+    circles = d3.selectAll("circle");
+
+    circles.classed(
+      "selected",
+      d =>
+        x0 <= xScale(d.food) &&
+        xScale(d.food) <= x1 &&
+        y0 <= yScale(d.diversity) &&
+        yScale(d.diversity) <= y1
+    );
+
+  }
+
+  var brush2 = d3
+    .brush()
+    .on("start brush", highlightChart)
+
+
+
+  // Render the axis
+  svg2.append('g')
+      .call(xAxis)
+      .attr('transform', 'translate(0,' + (height - 5) + ')')
+  svg2.append('g').call(yAxis)
+
+  // Render the points
+  svg2.selectAll('circle')
+      .data(cities)
+      .enter()
+        .append('circle')
+        .attr('cx', function(d) { return xScale(d.food)})
+        .attr('cy', function(d) { return yScale(d.diversity)})
+        .attr('r', 5)
+        .attr('fill', 'orange')
+  svg2.append("g").call(brush2);
+
+}
+
+function drawMap(us, cities, statesVisited, stateNames) {
   var mapGroup = svg.append("g").attr("class", "mapGroup");
+
+  let fillFunction = function(d) {
+    // console.log(d)
+    // console.log("statesVisited: ", statesVisited);
+    // console.log("stateNames: ", stateNames);
+    let stateName = stateNames.filter(function (n) { return n.id == d.id })[0].name
+    let statesVisitedNames = statesVisited.map(function (s) { return s.name } );
+    let isVisited = statesVisitedNames.includes(stateName);
+
+    if (isVisited) {
+      return 'blue';
+    } else {
+      return 'gray';
+    }
+  }
 
   mapGroup
     .append("g")
@@ -37,7 +138,18 @@ function drawMap(us, cities) {
     .enter()
     .append("path")
     .attr("d", path)
-    .attr("class", "states");
+    .attr("fill", fillFunction)
+    .attr("class", "states")
+    // .on('mouseover', function(d) {
+    //   // console.log("mouseover state", d)
+    //   // console.log(this)
+    //   let state = d3.select(this);
+    //   state.attr("fill", "red");
+    // })
+    // .on('mouseout', function(d) {
+    //   let state = d3.select(this);
+    //   state.attr("fill", fillFunction);
+    // });
 
   mapGroup
     .append("path")
@@ -93,7 +205,11 @@ var legend = svg
   .attr("width", 140)
   .attr("height", 200)
   .selectAll("g")
-  .data(["orange", "gray"])
+  .data([
+    {'color': 'orange', 'label': 'Cities Visited'}, 
+    {'color': 'gray', 'label': 'States Not Visited'},
+    {'color': 'blue', 'label': 'States Visited'}
+  ])
   .enter()
   .append("g")
   .attr("transform", function(d, i) {
@@ -104,8 +220,8 @@ legend
   .append("rect")
   .attr("width", 18)
   .attr("height", 18)
-  .style("fill", function(d) {
-    return d;
+  .style("fill", function(d) { 
+    return d.color
   });
 
 legend
@@ -113,6 +229,4 @@ legend
   .attr("x", 24)
   .attr("y", 9)
   .attr("dy", ".35em")
-  .text(function(d) {
-    return d;
-  });
+  .text(function(d) { return d.label });

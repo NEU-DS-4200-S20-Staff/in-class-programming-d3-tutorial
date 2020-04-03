@@ -2,11 +2,11 @@
   display: flex;
   flex-wrap: wrap;
 }
-
+/*
 .states {
   fill: #aaa;
 }
-
+*/
 #state-borders {
   fill: none;
   stroke: #fff;
@@ -20,6 +20,6 @@
   fill: orange;
 }
 
-.cities.selected {
+circle.selected {
   fill: red;
 }
